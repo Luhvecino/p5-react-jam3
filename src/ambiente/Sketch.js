@@ -139,51 +139,88 @@ class TelaIniciar {
 
     this.tempoUltimoDisparo = 0;
     this.intervaloDisparo = 1000; // 10 segundos
-  }
+    this.tempoInicio = p.millis();
+
+    this.spawnInimigo = new SpawnInimigo(
+      p,
+      5 * 60 * 1000, // 5 minutos
+      5000,          // a cada 5 segundos
+      () => {
+        this.inimigos.push(new Inimigo(p));
+      }
+    );
+  }  
 
   draw() {
     const p = this.p;
 
     this.fundo.desenhar();
     this.jogador.desenhar();
-
+    this.spawnInimigo.atualizar();
 
     // Atualiza e desenha os inimigos
     for (let inimigo of this.inimigos) {
       if (inimigo.estaVivo()) {
         inimigo.atualizar(this.jogador.pos);
-        inimigo.desenhar();
+        inimigo.desenhar();        
       }
-    }
+    }    
 
-    // Disparo automático a cada 10 segundos
-    if (this.inimigos.length > 0 && p.millis() - this.tempoUltimoDisparo > this.intervaloDisparo) {
+    //encontra inimigo mais próximo
+    if (this.inimigos.length > 0) {
       let alvo = encontrarInimigoMaisProximo(this.jogador, this.inimigos);
-      if (alvo) {
-        let novoProjetil = new ProjetilAteAlvo(p, this.jogador.pos.x, this.jogador.pos.y, alvo);
-        this.projeteis.push(novoProjetil);
-        this.tempoUltimoDisparo = p.millis();
-      }
+      this.jogador.disparar(alvo);
     }
 
-    if (this.inimigos.length > 0){
-      for (let proj of this.projeteis) {
-        proj.atualizar();
-        proj.desenhar();
-      }    
-    }
+    this.jogador.atualizarProjetis();  
 
-    this.projeteis = this.projeteis.filter(p => !p.morto);
+    this.jogador.projeteis = this.jogador.projeteis.filter(p => !p.morto);
+
     this.inimigos = this.inimigos.filter(inimigo => inimigo.estaVivo());
+
     // Verifica colisões entre projeteis e inimigos
-    for (let proj of this.projeteis) {
+    for (let proj of this.jogador.projeteis) {            
+      proj.verificarColisao(this.inimigos); 
       for (let inimigo of this.inimigos) {
-        if (inimigo.estaVivo() && proj.pos.dist(inimigo.pos) < 20) { // raio de colisão
-          inimigo.tomarDano(25); // tira 25 de vida
+        if (inimigo.estaVivo() && proj.pos.dist(inimigo.pos) < 20) {
+          inimigo.tomarDano(25);
           proj.morto = true;
         }
       }
     }
+  }
+}
+
+class SpawnInimigo {
+  constructor(p, duracao, intervalo, criarInimigoCallback) {
+    this.p = p;
+    this.duracao = duracao; // em milissegundos
+    this.intervalo = intervalo; // em milissegundos
+    this.criarInimigo = criarInimigoCallback;
+
+    this.tempoInicio = p.millis();
+    this.ultimoSpawn = p.millis();
+  }
+
+  atualizar() {
+    let agora = this.p.millis();
+    let tempoDecorrido = agora - this.tempoInicio;
+
+    if (tempoDecorrido < this.duracao) {
+      if (agora - this.ultimoSpawn >= this.intervalo) {
+        this.criarInimigo();
+        this.ultimoSpawn = agora;
+      }
+    }
+  }
+
+  progresso() {
+    let agora = this.p.millis();
+    return this.p.constrain((agora - this.tempoInicio) / this.duracao, 0, 1);
+  }
+
+  finalizado() {
+    return this.p.millis() - this.tempoInicio >= this.duracao;
   }
 }
 
@@ -192,6 +229,29 @@ class Jogador {
     this.p = p;
     this.img = new Imagem(p, 'img/player.png', p.width / 2, p.height / 2, 45, 50);  
     this.pos = p.createVector(p.width / 2, p.height / 2);  
+    this.intervaloDisparo = 1000; // 10 segundos
+    this.tempoUltimoDisparo = p.millis();
+    this.projeteis = []; // se quiser que o jogador carregue os projéteis
+  }
+
+  podeDisparar() {
+    return this.p.millis() - this.tempoUltimoDisparo >= this.intervaloDisparo;
+  }
+
+  disparar(alvo) {
+    if (this.podeDisparar() && alvo) {
+      let proj = new ProjetilAteAlvo(this.p, this.pos.x, this.pos.y, alvo);
+      this.projeteis.push(proj);
+      this.tempoUltimoDisparo = this.p.millis();
+    }
+  }
+
+  atualizarProjetis() {
+    for (let proj of this.projeteis) {
+      proj.atualizar();
+      proj.desenhar();
+    }
+    this.projeteis = this.projeteis.filter(p => !p.morto);
   }
 
   desenhar() {
@@ -250,6 +310,7 @@ class Inimigo {
     }
    
     this.barraFrente.desenhar();
+    
   }  
   tomarDano(valor) {
     this.vida -= valor;
@@ -313,50 +374,73 @@ class Som {
 }
 
 class ProjetilAteAlvo {
-  constructor(p, x, y, alvo, tamanho = 1, cor = [255, 255, 0]) {
+  constructor(p, x, y, alvo) {
     this.p = p;
     this.pos = p.createVector(x, y);
-    this.tamanho = tamanho;
-    this.cor = cor;
+    this.vel = p.createVector(0, 0);
+    this.velMax = 5;
+    this.tamanho = 2;
+    this.cor = [255, 255, 0];
+    this.morto = false;
     this.alvo = alvo;
-    this.vel = this.calcularDirecao(); // direção inicial
     this.rastro = [];
-    this.maxRastro = 10;
-    this.morto = false; 
-  }
 
-  calcularDirecao() {
-    if (!this.alvo) return this.p.createVector(0, 0);
-    let dir = p5.Vector.sub(this.alvo.pos, this.pos);
-    return dir.setMag(4); // velocidade constante
+    // calcula direção inicial
+    this.direcao = p.createVector(0, 0);
+    if (alvo) {
+      this.direcao = p5.Vector.sub(alvo.pos, this.pos);
+      this.direcao.normalize();
+    }
   }
 
   atualizar() {
-    // Atualiza direção se o alvo ainda existe
-    if (this.alvo) {
-      let novaDir = p5.Vector.sub(this.alvo.pos, this.pos);
-      this.vel = novaDir.setMag(4);
-    }
+    if (this.morto) return;
 
+    // manter a direção mesmo que alvo morra
+    this.vel = this.direcao.copy().mult(this.velMax);
     this.pos.add(this.vel);
 
-    // Rastro
+    // adicionar ao rastro
     this.rastro.push(this.pos.copy());
-    if (this.rastro.length > this.maxRastro) this.rastro.shift();
+    if (this.rastro.length > 10) {
+      this.rastro.shift();
+    }
+
+    // se sair da tela, marcar como morto
+    if (
+      this.pos.x < 0 || this.pos.x > this.p.width ||
+      this.pos.y < 0 || this.pos.y > this.p.height
+    ) {
+      this.morto = true;
+    }
+  }
+
+  verificarColisao(inimigos) {
+    for (let inimigo of inimigos) {
+      if (inimigo.estaVivo() && this.pos.dist(inimigo.pos) < 20) {
+        inimigo.tomarDano(25);
+        this.morto = true;
+        break;
+      }
+    }
   }
 
   desenhar() {
+    // desenha rastro
     for (let i = 0; i < this.rastro.length; i++) {
       let alpha = this.p.map(i, 0, this.rastro.length, 50, 150);
       this.p.fill(this.cor[0], this.cor[1], this.cor[2], alpha);
       this.p.noStroke();
-      this.p.rect(this.rastro[i].x, this.rastro[i].y, this.tamanho, this.tamanho);      
-    }  
+      this.p.rect(this.rastro[i].x, this.rastro[i].y, this.tamanho, this.tamanho);
+    }
+
+    // desenha o projétil
     this.p.fill(this.cor);
     this.p.noStroke();
     this.p.rect(this.pos.x, this.pos.y, this.tamanho, this.tamanho);
-  }  
+  }
 }
+
 
 function encontrarInimigoMaisProximo(jogador, inimigos) {
   let maisProximo = null;
