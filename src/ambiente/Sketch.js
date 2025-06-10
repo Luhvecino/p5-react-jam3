@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import 'p5/lib/addons/p5.sound';
 import p5 from 'p5';
 
 class Fundo {
@@ -137,14 +138,12 @@ class TelaIniciar {
     this.inimigos = [new Inimigo(p)]; // lista (para futuro)
     this.projeteis = [];
 
-    this.tempoUltimoDisparo = 0;
-    this.intervaloDisparo = 1000; // 10 segundos
-    this.tempoInicio = p.millis();
+    this.interface = new Interface(p, this.jogador);
 
     this.spawnInimigo = new SpawnInimigo(
       p,
       5 * 60 * 1000, // 5 minutos
-      5000,          // a cada 5 segundos
+      2000,          // 2 segundos
       () => {
         this.inimigos.push(new Inimigo(p));
       }
@@ -157,6 +156,7 @@ class TelaIniciar {
     this.fundo.desenhar();
     this.jogador.desenhar();
     this.spawnInimigo.atualizar();
+    this.interface.desenhar();
 
     // Atualiza e desenha os inimigos
     for (let inimigo of this.inimigos) {
@@ -175,6 +175,7 @@ class TelaIniciar {
     this.jogador.atualizarProjetis();  
 
     this.jogador.projeteis = this.jogador.projeteis.filter(p => !p.morto);
+    
 
     this.inimigos = this.inimigos.filter(inimigo => inimigo.estaVivo());
 
@@ -185,6 +186,10 @@ class TelaIniciar {
         if (inimigo.estaVivo() && proj.pos.dist(inimigo.pos) < 20) {
           inimigo.tomarDano(25);
           proj.morto = true;
+        }
+        // Verifica se morreu 
+        if (!inimigo.estaVivo()) {
+          this.jogador.ganharXp(inimigo.valorXp);          
         }
       }
     }
@@ -228,10 +233,16 @@ class Jogador {
   constructor(p) {
     this.p = p;
     this.img = new Imagem(p, 'img/player.png', p.width / 2, p.height / 2, 45, 50);  
+    this.somDisparo = new Som(p, 'sons/nota1.wav');
+    this.somDisparo.volume(0.3); // volume mais baixo
     this.pos = p.createVector(p.width / 2, p.height / 2);  
-    this.intervaloDisparo = 1000; // 10 segundos
+    this.intervaloDisparo = 1000; 
     this.tempoUltimoDisparo = p.millis();
-    this.projeteis = []; // se quiser que o jogador carregue os projéteis
+    this.projeteis = []; 
+
+    this.xpAtual = 0;
+    this.xpMax = 100;
+
   }
 
   podeDisparar() {
@@ -240,11 +251,12 @@ class Jogador {
 
   disparar(alvo) {
     if (this.podeDisparar() && alvo) {
+      this.somDisparo.tocar();
       let proj = new ProjetilAteAlvo(this.p, this.pos.x, this.pos.y, alvo);
       this.projeteis.push(proj);
       this.tempoUltimoDisparo = this.p.millis();
     }
-  }
+  }  
 
   atualizarProjetis() {
     for (let proj of this.projeteis) {
@@ -254,8 +266,45 @@ class Jogador {
     this.projeteis = this.projeteis.filter(p => !p.morto);
   }
 
+  ganharXp(qtd) {
+  this.xpAtual += qtd;
+  if (this.xpAtual > this.xpMax) {
+    this.xpAtual = this.xpMax;
+    //lógica de "subir de nível" mais tarde
+  }
+}
+
   desenhar() {
-    this.img.desenhar();         
+    this.img.desenhar();       
+  }
+}
+
+class Interface {
+  constructor(p, jogador) {
+    this.p = p;
+    this.jogador = jogador;
+
+    this.barraXpFundo = new Imagem(p, 'img/XpFundo.png', 0, 0, 1000, 6);
+    this.barraXpFrente = new Imagem(p, 'img/XpFrente.png', 0, 0, 0, 6); // largura inicial pequena
+
+    this.posX = p.width / 2;
+    this.posY = 20;
+  }
+
+  desenhar() {
+    const p = this.p;
+
+    // Desenha fundo
+    this.barraXpFundo.x = this.posX;
+    this.barraXpFundo.y = this.posY;
+    this.barraXpFundo.desenhar();
+
+    // Atualiza proporção e aplica na largura da frente
+    const proporcao = this.jogador.xpAtual / this.jogador.xpMax;
+    this.barraXpFrente.x = this.posX;
+    this.barraXpFrente.y = this.posY;
+    this.barraXpFrente.w = 1000 * proporcao + 1; // <-- ESSENCIAL
+    this.barraXpFrente.desenhar();
   }
 }
 
@@ -267,13 +316,15 @@ class Inimigo {
     this.velMax = 0.1;
     this.vivo = true;
 
-    this.vidaMax = 100;
-    this.vida = 100;
+    this.vidaMax = 200;
+    this.vida = 200;
     this.larguraBarra = 40;
 
     this.img = new Imagem(p, 'img/enemyG.gif', this.pos.x, this.pos.y, 45, 50); 
     this.barraFundo = new Imagem(p, 'img/barraFundo.png', this.pos.x, this.pos.y, 40, 5);
     this.barraFrente = new Imagem(p, 'img/barraFrente.png', this.pos.x, this.pos.y, 40, 5);
+
+    this.valorXp = 20;
   }
 
   atualizar(alvo) {
@@ -282,13 +333,7 @@ class Inimigo {
     direcao.mult(0.5);
     this.vel.add(direcao);
     this.vel.limit(this.velMax);
-    this.pos.add(this.vel);
-     // Atualiza posição das barras
-    this.barraFundo.x = this.pos.x;
-    this.barraFundo.y = this.pos.y - 30;
-
-    this.barraFrente.x = this.pos.x ;
-    this.barraFrente.y = this.pos.y - 30;
+    this.pos.add(this.vel);         
   }
 
   desenhar() {
@@ -350,14 +395,14 @@ class Imagem {
 }
 
 class Som {
-  constructor(p, caminho, loop = false) {
+  constructor(p, caminho, loop = false) {    
     this.p = p;
     this.audio = p.loadSound(caminho);
     this.audio.setLoop(loop);
   }
 
   tocar() {
-    if (!this.audio.isPlaying()) {
+    if (this.audio && this.audio.isLoaded()) {
       this.audio.play();
     }
   }
@@ -457,10 +502,8 @@ function encontrarInimigoMaisProximo(jogador, inimigos) {
   return maisProximo;
 }
 
-export default function MenuComponent() {
-  const sketchRef = useRef();
-
-  useEffect(() => {
+const Sketch = () => {
+   useEffect(() => {
     let myP5;
     let telaAtual = 'menu';
     let telaObj;
@@ -497,11 +540,14 @@ export default function MenuComponent() {
       };
     };
 
-    new p5(sketch, sketchRef.current);
+    const p5Instance = new window.p5(sketch, document.getElementById('p5-container'));
+
     return () => {
-      myP5.remove();
+      p5Instance.remove();
     };
   }, []);
 
-  return <div ref={sketchRef}></div>;
-}
+  return <div id="p5-container"></div>;
+};
+
+export default Sketch;
