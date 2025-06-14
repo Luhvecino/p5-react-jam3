@@ -76,6 +76,7 @@ class Upgrade {
     this.jogador = jogador;
     this.inimigo = inimigo;
     this.fundo = new Fundo(p, 150);
+    this.bg = new Imagem(p,'/img/bgUpdate.gif',p.width/2,p.height/2,p.width,p.height);
     this.botaoUpgrade = botaoUpgrade;
     this.moeda = moeda;  
     this.frases = null;  
@@ -116,7 +117,9 @@ class Upgrade {
     this.frases30 = [
       "Médio",
       "Mediano",
-      "Mediocre"
+      "Mediocre",
+      "Sabia que existia um potencial. \n Pra ser ruim, é claro",
+      "Você é muito bom, \n já pensou em se aposentar ? ",
     ];
     this.frasesMais30 = [
       "Porque me descepcionas ?",
@@ -124,16 +127,14 @@ class Upgrade {
       "Mais uminha ?",
       "Essa aqui é saideira né ?",
       "SAIDEIRA É SÓ COM VITÓRIA",
-      "idai que é tarde ?",
       "Está com medo de vercer ?",
     ];
     this.frasesFinais = [
-      "Sempre acreditei em você",
-      "Sabia que existia um potencial. \n Pra ser ruim é claro",
-      "Você é muito bom, já pensou em se aposentar ? ",
+      "Sempre acreditei em você !",
       "Quer um bolo ?",
       "Está satisfeito ?",
-      "Era isso que você queria ?"      
+      "Era isso que você queria ?",
+      "Que bela conquista hein !"     
     ];
     this.iTutorial = this.p.floor(this.p.random(0, this.frasesTutorial.length));
     this.iAte30 = this.p.floor(this.p.random(0, this.frasesAte30.length));
@@ -145,6 +146,7 @@ class Upgrade {
   draw() {
     const p = this.p; 
     this.fundo.desenhar();
+    this.bg.desenhar();
     this.botaoIniciar.desenhar();  
     for (let botaoUpgrade of botoesUpgradeGlobais) {
       botaoUpgrade.desenhar();
@@ -162,7 +164,8 @@ class Upgrade {
     if (this.fraseY > 60) {
       this.fraseY -= 5; 
     }
-    console.log(this.jogador.xpAtual);
+
+    //Logica para as frases
     if(this.jogador.xpAtual < 10 ){
       this.frases = this.frasesTutorial; 
       p.text(`${this.frases[this.iTutorial]}`,this.p.width / 2, this.fraseY);
@@ -183,9 +186,6 @@ class Upgrade {
       this.frases = this.frasesFinais;
       p.text(`${this.frases[this.iFinais]}`,this.p.width / 2, this.fraseY); 
     }
-
-    
-    
     p.pop()
 
     
@@ -206,33 +206,86 @@ class Interface {
   constructor(p, jogador, mostrar = false) {
     this.p = p;
     this.mostrar = mostrar;
-
     this.jogador = jogador;
-
     this.barraXpFundo = new Imagem(p, 'img/XpFundo.png', 0, 0, 1000, 6);
-    this.barraXpFrente = new Imagem(p, 'img/XpFrente.png', 0, 0, 0, 6); 
-
+    this.barraXpFrente = new Imagem(p, 'img/XpFrente.png', 0, 0, 0, 6);  
     this.posX = p.width / 2;
     this.posY = 20;    
   }
 
   desenhar() {
     const p = this.p;
-
     if (this.mostrar){
-
-      this.barraXpFundo.x = this.posX;
-      this.barraXpFundo.y = this.posY;
       this.barraXpFundo.desenhar();
-  
-      const proporcao = this.jogador.xpAtual / this.jogador.xpMax;
-      this.barraXpFrente.x = this.posX;
-      this.barraXpFrente.y = this.posY;
-      this.barraXpFrente.w = 1000 * proporcao + 1;
-      this.barraXpFrente.desenhar();   
+      this.barraXpFrente.desenhar();  
+      if( this.jogador.xpAtual <= 60){
+        const proporcao = this.jogador.xpAtual / this.jogador.xpMax;              
+        this.barraXpFrente.w = 1000 * proporcao + 1;
+        this.barraXpFundo.x = this.posX;
+        this.barraXpFundo.y = this.posY;
+        this.barraXpFrente.x = this.posX;
+        this.barraXpFrente.y = this.posY;         
+      }
+    }
+  }  
+}
+
+class TelaFinal {
+  constructor(p, mudarTela, jogador ) {
+    this.p = p;
+    this.jogador = jogador;
+    this.fundo = new Fundo(p, 150);
+    this.bgUpdate = new Imagem(p,'/img/gamebg.png',p.width/2,p.height/2,p.width,p.height);
+    
+    this.frases = null;  
+    this.size = 500; // tamanho inicial da letra
+    this.fraseX = this.p.width / 2;
+    this.fraseY = this.p.height / 2;
+
+    this.botaoUpgrade = new Botao(p,5, 5, 100, 40, 'upgrade', () => {mudarTela('upgrade'); 
+    });     
+
+    this.posY = p.height; 
+    this.velocidade = 1; 
+    
+    this.frasesFinais = [
+      "Sempre acreditei em você",      
+      "Quer um bolo ?",
+      "Está satisfeito ?",
+      "Era isso que você queria ?"      
+    ];
+    this.iFinais = this.p.floor(this.p.random(0, this.frasesFinais.length));
+  }
+
+  draw() {
+    const p = this.p; 
+    this.fundo.desenhar();
+    this.bgUpdate.desenhar();
+    this.botaoUpgrade.desenhar();     
+     
+    p.push()
+    p.stroke(5)
+    p.fill(255,200,200);    
+    p.textSize(this.size);
+    if (this.size > 50) {
+      this.size -= 5; 
+    }
+    p.textAlign(p.CENTER, p.CENTER);
+    
+    if (this.fraseY > 60) {
+      this.fraseY -= 5; 
     }
     
-  }  
+    if(this.jogador.xpAtual > 60){
+      this.frases = this.frasesFinais;
+      p.text(`${this.frases[this.iFinais]}`,this.p.width / 2, this.p.height / 2); 
+    }  
+    p.pop()
+  }
+
+  mousePressed() {
+    this.botaoUpgrade.checarClique();    
+  }
 }
 
 class TelaIniciar {
@@ -240,6 +293,7 @@ class TelaIniciar {
     this.p = p;
     this.mudarTela = mudarTela;
     this.fundo = new Fundo(p, 150);   
+    this.bgUpdate = new Imagem(p,'/img/gamebg.png',p.width/2,p.height/2,p.width,p.height);
     this.jogador = jogador;
 
     this.botaoUpgrade = botaoUpgrade;
@@ -250,16 +304,14 @@ class TelaIniciar {
     this.arena = area;
     
     let intervaloSpawn1 = 1000;
-    let intervaloSpawn2 = 1000;
+    let intervaloSpawn2 = 2000;
     this.spawnInimigo = new SpawnInimigo(
       p,
-      2 * 60 * 1000,       
+      1 * 60 * 1000,       
       intervaloSpawn1,          
       () => {
         if (this.jogador && this.jogador.pos) {    
-          if(intervaloSpawn1 > 500){
-            intervaloSpawn1 -= velocidadeInimigoGlobal*2;
-          }    
+             
           //alvo = jogado      
           //const destino = p.createVector(this.jogador.pos.x, this.jogador.pos.y);
           //alvo = arena
@@ -267,40 +319,70 @@ class TelaIniciar {
             p.random(this.arena.x, this.arena.x + this.arena.largura),
             p.random(this.arena.y, this.arena.y + this.arena.altura)
           );
-          const novoInimigo = new Inimigo(p, destino); // cria um novo inimigo com velocidade nova
+          const novoInimigo = new Inimigo(p, destino,"esquerda"); // cria um novo inimigo com velocidade nova
           this.inimigos.push(novoInimigo);
         }        
       }
     );
     this.spawnInimigo2 = new SpawnInimigo(
       p,
-      2 * 60 * 1000, // duração total
-      intervaloSpawn2,          // intervalo
+      1 * 60 * 1000, // duração total
+      intervaloSpawn1,          // intervalo
       () => {         
-        if (this.jogador && this.jogador.pos) {                
-          console.log(intervaloSpawn1);
-          if(intervaloSpawn2 > 1000){
-            intervaloSpawn2 -= velocidadeInimigoGlobal*2;
-          }           
+        if (this.jogador && this.jogador.pos) { 
+                   
           //alvo = arena
           const destino = p.createVector(
             p.random(this.arena.x, this.arena.x + this.arena.largura),
             p.random(this.arena.y, this.arena.y + this.arena.altura)
           );
-          const novoInimigo = new Inimigo(p, destino); // cria um novo inimigo com velocidade nova
+          const novoInimigo = new Inimigo(p, destino, "direita"); // cria um novo inimigo com velocidade nova
           this.inimigos.push(novoInimigo);
         }        
       }
     );
-    this.interfaceG = interfaceG;      
-    
+    this.spawnInimigo3 = new SpawnInimigo(
+      p,
+      1 * 60 * 1000, // duração total
+      intervaloSpawn2,          // intervalo
+      () => {         
+        if (this.jogador && this.jogador.pos) { 
+                   
+          //alvo = arena
+          const destino = p.createVector(
+            p.random(this.arena.x, this.arena.x + this.arena.largura),
+            p.random(this.arena.y, this.arena.y + this.arena.altura)
+          );
+          const novoInimigo = new Inimigo(p, destino, "cima"); // cria um novo inimigo com velocidade nova
+          this.inimigos.push(novoInimigo);
+        }        
+      }
+    );
+    this.spawnInimigo4 = new SpawnInimigo(
+      p,
+      1 * 60 * 1000, // duração total
+      intervaloSpawn2,          // intervalo
+      () => {         
+        if (this.jogador && this.jogador.pos) { 
+                   
+          //alvo = arena
+          const destino = p.createVector(
+            p.random(this.arena.x, this.arena.x + this.arena.largura),
+            p.random(this.arena.y, this.arena.y + this.arena.altura)
+          );
+          const novoInimigo = new Inimigo(p, destino, "baixo"); // cria um novo inimigo com velocidade nova
+          this.inimigos.push(novoInimigo);
+        }        
+      }
+    );
+    this.interfaceG = interfaceG;    
   }   
   
 
   draw() {
-    
     const p = this.p; 
     this.fundo.desenhar();
+    this.bgUpdate.desenhar();
     this.arena.desenhar();
     this.arena.limitar(this.jogador.pos);     
 
@@ -312,6 +394,8 @@ class TelaIniciar {
 
     this.spawnInimigo.atualizar();
     this.spawnInimigo2.atualizar();
+    this.spawnInimigo3.atualizar();
+    this.spawnInimigo4.atualizar();
     this.interfaceG.desenhar();
     
     for (let i = this.inimigos.length - 1; i >= 0; i--) {
@@ -319,19 +403,22 @@ class TelaIniciar {
 
       if (colisaoRetangular(this.jogador, inimigo)) {
         this.inimigos.splice(i, 1);
-        this.jogador.vidaAtual -= 20;
-        
+        this.jogador.vidaAtual -= 20;        
       }
-
       inimigo.atualizar(this.jogador.pos);
       inimigo.desenhar();
-    }     
-
+    }   
+    
     if (this.jogador.vidaAtual <= 0) {   
-      this.mudarTela('upgrade', this.botaoUpgrade);
-    }
+        this.mudarTela('upgrade', this.botaoUpgrade);
+      }
+    
+    if(this.jogador.xpAtual >= 65 ){
+      this.mudarTela('final'); 
+    } 
   }
 }
+
 
 //Elementos do jogo
 class Jogador {
@@ -345,9 +432,10 @@ class Jogador {
     this.velMax = 1.0;
     this.acelMax = 10;
     this.xpAtual = 0;
-    this.xpMax = 120;
-    this.vidaMax = 50;
-    this.vidaAtual = 50;
+    this.xpMax = 60;
+
+    this.vidaMax = 100;
+    this.vidaAtual = 100;
   }
 
   atualizar() {
@@ -374,19 +462,30 @@ class Jogador {
     this.img.desenhar();
 
     const proporcao = this.vidaAtual / this.vidaMax;
-    this.playerLife.h = 50 * proporcao - 5; 
-    this.playerLife.w = 50 * proporcao - 5; 
+    this.playerLife.h = 50 * proporcao ; 
+    this.playerLife.w = 50 * proporcao; 
     this.playerLife.desenhar();
   }
 }
 
 class Inimigo {
-  constructor(p, destino) {
+  constructor(p, destino, setLado = null) {
     this.p = p;
     this.img = new Imagem(p, 'img/enemy.png', p.width / 2, p.height / 2, 25, 25);
-
-    let lado = p.random([ 'esquerda', 'direita', 'cima', 'baixo' ]);
-    
+    this.setLado = setLado
+    if(setLado != null){
+    // posição do spawn
+    if (setLado === 'esquerda') {
+      this.pos = p.createVector(0, p.random(p.height));
+    } else if (setLado === 'direita') {
+      this.pos = p.createVector(p.width, p.random(p.height));
+    } else if (setLado === 'cima') {
+      this.pos = p.createVector(p.random(p.width), 0);
+    } else if (setLado === 'baixo') {
+      this.pos = p.createVector(p.random(p.width), p.height);
+    }
+    }else{
+      let lado = p.random([ 'esquerda', 'direita', 'cima', 'baixo' ]);  
     // posição do spawn
     if (lado === 'esquerda') {
       this.pos = p.createVector(0, p.random(p.height));
@@ -397,8 +496,10 @@ class Inimigo {
     } else if (lado === 'baixo') {
       this.pos = p.createVector(p.random(p.width), p.height);
     }
+    }
     this.destino = destino;
     this.vel = p5.Vector.sub(destino, this.pos).normalize().mult(velocidadeInimigoGlobal);
+    
   }
 
  atualizar() {
@@ -434,8 +535,8 @@ class Arena {
 
   limitar(pos) {
     // Limita a posição recebida para ficar dentro da arena
-    pos.x = this.p.constrain(pos.x, this.x + 23, this.x + this.largura - 23);
-    pos.y = this.p.constrain(pos.y, this.y + 25, this.y + this.altura - 25);
+    pos.x = this.p.constrain(pos.x, this.x + 27, this.x + this.largura - 27);
+    pos.y = this.p.constrain(pos.y, this.y + 27, this.y + this.altura - 27);
   }
 
    expandir(delta) {
@@ -554,6 +655,7 @@ class botaoUpgrade {
 
 }
 
+
 //Classes auxiliares
 class Fundo {
   constructor(p, cor) {
@@ -627,7 +729,7 @@ class SpawnInimigo {
     
     if (tempoDecorrido < this.duracao) {
       if (agora - this.ultimoSpawn >= this.intervalo) {        
-        velocidadeInimigoGlobal += 0.1;        
+        //velocidadeInimigoGlobal += 0.1;        
         this.criarInimigo();
         this.ultimoSpawn = agora;        
       }
@@ -724,16 +826,12 @@ const Sketch = () => {
     let musicaFundo;
     const sketch = (p) => {
       myP5 = p;    
-      
-
       p.setup = () => {
-        p.createCanvas(1250, 720);
-
-        musicaFundo = new Som(p, 'sons/music.wav',true);     
+        p.createCanvas(1200, 800);
+        musicaFundo = new Som(p, 'sons/music.wav', true);     
         musicaFundo.volume(0.05);   
-        
         mudarTela(telaAtual);
-        
+
         //variáveis globais para não serem resetadas quando trocar de tela.
         jogadorGlobal = new Jogador(p); 
         moedaGlobal = new Moeda(p, jogadorGlobal);
@@ -746,13 +844,13 @@ const Sketch = () => {
           new botaoUpgrade(p, "+ Tamanho da área", p.width / 2 - 100, p.height / 2, 200, 100, 3, 5,() => {areaGlobal.largura += 50; areaGlobal.altura += 50; areaGlobal.x -= 25; areaGlobal.y -= 25}),
           new botaoUpgrade(p, "- Velocidade dos \n inimigos", p.width / 2 - 100, p.height / 2 + 100, 200, 100, 3, 5,() => {upgradesAplicados.inimigoVel -= 0.5; velocidadeInimigoGlobal = velocidadeInimigoBase + upgradesAplicados.inimigoVel;}),
           new botaoUpgrade(p, "Barra de tempo", p.width / 2 - 100, p.height / 2 + 200, 200, 100, 1, 10,() => {interfaceGlobal.mostrar = true}),
-        ); 
+        );         
         
        };
        
-      const mudarTela = (novaTela) => {
+      const mudarTela = (novaTela) => {        
+        telaAtual = novaTela;       
         
-        telaAtual = novaTela;
         if (novaTela === 'menu') {
           telaObj = new Menu(myP5, mudarTela);
         } else if (novaTela === 'sobre') {
@@ -762,10 +860,13 @@ const Sketch = () => {
           musicaFundo.volume(0.05);  
           if (!musicaFundo.estaTocando()) {
             musicaFundo.tocar();  
-          }               
+          }                    
         }else if (novaTela === 'upgrade') {          
           musicaFundo.volume(0.00); 
           telaObj = new Upgrade(p, mudarTela, jogadorGlobal, inimigoGlobal, botoesUpgradeGlobais, moedaGlobal);          
+        }else if (novaTela === 'final') {          
+          musicaFundo.volume(0.00); 
+          telaObj = new TelaFinal(p, mudarTela, jogadorGlobal);          
         }
       };
 
