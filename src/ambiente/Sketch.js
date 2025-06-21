@@ -839,7 +839,7 @@ const Sketch = () => {
         areaGlobal = new Arena(p, p.width/2, p.height/2, 100, 100);  
         
         botoesUpgradeGlobais.push(          
-          new botaoUpgrade(p, "+ Vida Max", p.width / 2 + 100 , p.height / 2 -100 , 200, 100, 3, 10,() =>{jogadorGlobal.vidaMax += 100;} ),
+          new botaoUpgrade(p, "+ Vida Max", p.width / 2 + 100 , p.height / 2 -100 , 200, 100, 3, 10,() =>{jogadorGlobal.vidaMax += 50;} ),
           new botaoUpgrade(p, "+ Velocidade", p.width / 2 - 100, p.height / 2 - 100, 200, 100, 3, 10,() =>{jogadorGlobal.velMax += 0.5;} ),
           new botaoUpgrade(p, "+ Tamanho da área", p.width / 2 - 100, p.height / 2, 200, 100, 3, 5,() => {areaGlobal.largura += 50; areaGlobal.altura += 50; areaGlobal.x -= 25; areaGlobal.y -= 25}),
           new botaoUpgrade(p, "- Velocidade dos \n inimigos", p.width / 2 - 100, p.height / 2 + 100, 200, 100, 3, 5,() => {upgradesAplicados.inimigoVel -= 0.5; velocidadeInimigoGlobal = velocidadeInimigoBase + upgradesAplicados.inimigoVel;}),
