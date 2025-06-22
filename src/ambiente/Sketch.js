@@ -131,7 +131,7 @@ class Upgrade {
       "\n \n \n <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< \n O dinheiro vc ganha com o tempo",
       "Você tem que sobreviver por 1 minuto",
       "Movimente o personagem com o mouse",
-      "Então, o esquema é você \n desviar das bolhinhas vermelhas",
+      "Então, seu objetivo é você \n desviar das bolhinhas vermelhas",
     ];
 
     this.frasesAte30 = [
@@ -149,11 +149,8 @@ class Upgrade {
       "Médio",
       "Mediano",
       "Mediocre",
-      "Sabia que existia um potencial. \n Pra ser ruim, é claro",
-      "Você é muito bom, \n já pensou em se aposentar ? ",
     ];
     this.frasesMais30 = [
-      "Porque me descepcionas ?",
       "Está tão perto, ao mesmo tempo tão longe...",
       "Mais uminha ?",
       "Essa aqui é saideira né ?",
@@ -161,11 +158,12 @@ class Upgrade {
       "Está com medo de vercer ?",
     ];
     this.frasesFinais = [
-      "Sempre acreditei em você !",
-      "Quer um bolo ?",
-      "Está satisfeito ?",
-      "Era isso que você queria ?",
-      "Que bela conquista hein !",
+      "Você Venceu ! \n Sempre acreditei em você !",      
+      "Você Venceu ! \n Você Venceu !Nunca duvidei do seu potencial !",
+      "Você Venceu ! \n Quer um bolo ?",
+      "Você Venceu ! \n Está satisfeito ?",
+      "Você Venceu ! \n Era isso que você queria ?",
+      "Você Venceu ! \n Que bela conquista hein !",
     ];
     this.iTutorial = this.p.floor(this.p.random(0, this.frasesTutorial.length));
     this.iAte30 = this.p.floor(this.p.random(0, this.frasesAte30.length));
@@ -198,11 +196,11 @@ class Upgrade {
     }
 
     //Logica para as frases
-    if (this.jogador.xpAtual < 10) {
+    if (this.jogador.xpAtual < 20) {
       this.frases = this.frasesTutorial;
       p.text(`${this.frases[this.iTutorial]}`, this.p.width / 2, this.fraseY);
     }
-    if (this.jogador.xpAtual >= 10 && this.jogador.xpAtual < 30) {
+    if (this.jogador.xpAtual >= 20 && this.jogador.xpAtual < 30) {
       this.frases = this.frasesAte30;
       p.text(`${this.frases[this.iAte30]}`, this.p.width / 2, this.fraseY);
     }
@@ -333,7 +331,7 @@ class TelaFinal {
 }
 
 class TelaIniciar {
-  constructor(p, mudarTela, jogador, botaoUpgrade, moeda, interfaceG, area) {
+  constructor(p, mudarTela, jogador, botaoUpgrade, moeda, interfaceG, area, chuvaGlobal) {
     this.p = p;
     this.mudarTela = mudarTela;
     this.fundo = new Fundo(p, 150);
@@ -354,6 +352,14 @@ class TelaIniciar {
     this.moeda = moeda;
     this.inimigos = [];
     this.arena = area;
+    this.chuva = chuvaGlobal;
+
+    // Controle do vento
+    this.tempoUltimoVento = p.millis();
+    this.ventoAtivo = false;
+    this.duracaoVento = 10000; // 10 segundos
+    this.intervaloVento = 10000; // 10 segundos
+    this.direcaoVento = 1; // 1 = direita, -1 = esquerda
 
     // INTERVALOS INICIAIS
     this.spawnInimigo = new SpawnInimigo(p, 2000, () => {
@@ -407,6 +413,7 @@ class TelaIniciar {
     const p = this.p;
     this.fundo.desenhar();
     this.bgUpdate.desenhar();
+    this.chuva.atualizarEDesenhar();
     this.arena.desenhar();
     this.arena.limitar(this.jogador.pos);
 
@@ -446,13 +453,17 @@ class TelaIniciar {
       let inimigo = this.inimigos[i];
       if (colisaoRetangular(this.jogador, inimigo)) {
         this.inimigos.splice(i, 1);
-        this.jogador.vidaAtual -= 20;
+        this.jogador.vidaAtual -= 25;
       }
       inimigo.atualizar(this.jogador.pos);
       inimigo.desenhar();
     }
 
     if (this.jogador.vidaAtual <= 0) {
+      // Reseta o temporizador do vento ao morrer
+      this.ventoAtivo = false;
+      this.tempoUltimoVento = this.p.millis();
+      this.chuva.setVento(0, 0);
       this.mudarTela("upgrade", this.botaoUpgrade);
       this.inimigos = [];
     }
@@ -460,13 +471,41 @@ class TelaIniciar {
     if (this.jogador.xpAtual >= 65) {
       this.mudarTela("final");
     }
+
+    // --- CONTROLE DO VENTO TEMPORIZADO ---
+    let agora = p.millis();
+    if (!this.ventoAtivo && agora - this.tempoUltimoVento > this.intervaloVento) {
+      // Ativa vento por 10 segundos
+      this.ventoAtivo = true;
+      this.tempoInicioVento = agora;
+
+      // Sorteia eixo (0 = horizontal, 1 = vertical) e direção
+      const eixo = p.random([0, 1]);
+      const direcao = p.random([1, -1]);
+      if (eixo === 0) {
+        // Horizontal
+        this.chuva.setVento(5 * direcao, 0);
+      } else {
+        // Vertical
+        this.chuva.setVento(0, 5 * direcao);
+      }
+    }
+    if (this.ventoAtivo && agora - this.tempoInicioVento > this.duracaoVento) {
+      // Desativa vento
+      this.ventoAtivo = false;
+      this.tempoUltimoVento = agora;
+      this.chuva.setVento(0, 0);
+    }
   }
+
 }
 
 //Elementos do jogo
 class Jogador {
   constructor(p) {
     this.escala = 1;
+    this.vx = 0;
+    this.vy = 0;
     this.w = 50;
     this.h = 50;
     this.p = p;
@@ -496,7 +535,7 @@ class Jogador {
     this.xpMax = 60;
 
     this.vidaMax = 100;
-    this.vidaAtual = 100;
+    this.vidaAtual = this.vidaMax;
   }
 
   atualizar() {
@@ -506,24 +545,31 @@ class Jogador {
     if (direcao.mag() > 1) {
       direcao.normalize();
       direcao.mult(this.acelMax);
+
       this.acel = direcao;
       this.vel.add(this.acel);
       this.vel.limit(this.velMax);
-      this.pos.add(this.vel);
     }
+
+    // --- APLICA O VENTO DA CHUVA ---
+    if (chuvaGlobal) {
+      if (chuvaGlobal.ventoX) this.vel.x += chuvaGlobal.ventoX * 0.1;
+      if (chuvaGlobal.ventoY) this.vel.y += chuvaGlobal.ventoY * 0.1;
+    }
+
+    this.pos.add(this.vel);
 
     this.img.x = this.pos.x;
     this.img.y = this.pos.y;
-
     this.playerLife.x = this.pos.x;
     this.playerLife.y = this.pos.y;
   }
 
   desenhar() {
-    // Player principal:
+    // Player principal:    
     this.img.w = 50 * this.escala;
     this.img.h = 50 * this.escala;
-    this.img.desenhar();
+    this.img.desenhar();    
     // Barra de vida:
     const proporcao = this.vidaAtual / this.vidaMax;
     this.playerLife.w = 50 * this.escala * proporcao;
@@ -531,7 +577,8 @@ class Jogador {
     this.playerLife.x = this.pos.x;
     this.playerLife.y = this.pos.y;
     this.playerLife.desenhar();
-  }
+  }  
+
 }
 
 class Inimigo {
@@ -578,6 +625,15 @@ class Inimigo {
 
   atualizar() {
     this.pos.add(this.vel);
+
+    // Aplica o vento da chuva
+    if (chuvaGlobal) {
+      if (chuvaGlobal.ventoX) this.vel.x += 0.005;
+      if (chuvaGlobal.ventoY) this.vel.y += 0.005;
+    }
+
+    this.pos.add(this.vel);
+
     this.img.x = this.pos.x;
     this.img.y = this.pos.y;
   }
@@ -608,10 +664,12 @@ class Arena {
   }
 
   limitar(pos) {
-    // Limita a posição recebida para ficar dentro da arena
-    pos.x = this.p.constrain(pos.x, this.x + 27, this.x + this.largura - 27);
-    pos.y = this.p.constrain(pos.y, this.y + 27, this.y + this.altura - 27);
-  }
+  // Usa metade da largura/altura do jogador para limitar corretamente
+  const margemX = jogadorGlobal.w / 2 * jogadorGlobal.escala;
+  const margemY = jogadorGlobal.h / 2 * jogadorGlobal.escala;
+  pos.x = this.p.constrain(pos.x, this.x + margemX, this.x + this.largura - margemX);
+  pos.y = this.p.constrain(pos.y, this.y + margemY, this.y + this.altura - margemY);
+}
 
   expandir(delta) {
     // Expande a arena proporcionalmente e recentraliza
@@ -631,18 +689,20 @@ class Moeda {
     this.quantidade = 0;
     this.tempoUltima = p.millis();
     this.imagem = new Imagem(p, "img/moeda.gif", this.x, this.y, 50, 50);
+    this.multiplicador = 1; // NOVO: multiplicador de moedas
   }
 
   atualizar() {
     if (this.jogador.vidaAtual > 0) {
       const agora = this.p.millis();
       if (agora - this.tempoUltima >= 1000) {
-        this.jogador.xpAtual++;
-        this.quantidade++;
+        this.jogador.xpAtual += 1;
+        this.quantidade += this.multiplicador;
         this.tempoUltima = agora;
       }
     }
   }
+
 
   desenhar() {
     this.imagem.desenhar();
@@ -736,6 +796,69 @@ class botaoUpgrade {
       this.cliques++;
       this.custo *= 5;
       this.aoClicar();
+    }
+  }
+}
+
+class Gota {
+  constructor(p) {
+    this.p = p;
+    this.x = p.random(p.width);
+    this.y = p.random(p.height);
+    this.vel = p.random(4, 10);
+    this.tam = p.random(1, 2);
+  }
+
+  atualizar(ventoX = 0, ventoY = 0) {
+    this.x += ventoX;
+    this.y += this.vel + ventoY;
+
+    // Se sair por baixo, reinicia no topo em posição aleatória
+    if (this.y > this.p.height) {
+      this.y = this.p.random(-20, 0);
+      this.x = this.p.random(this.p.width);
+    }
+
+    // Se sair pela esquerda, reinicia na borda direita em altura aleatória
+    if (this.x < 0) {
+      this.x = this.p.width;
+      this.y = this.p.random(this.p.height);
+    }
+
+    // Se sair pela direita, reinicia na borda esquerda em altura aleatória
+    if (this.x > this.p.width) {
+      this.x = 0;
+      this.y = this.p.random(this.p.height);
+    }
+  }
+
+  desenhar() {
+    this.p.stroke(100, 100, 255, 255);
+    this.p.strokeWeight(this.tam);
+    this.p.line(this.x, this.y, this.x, this.y + 10 * this.tam);
+  }
+}
+
+class Chuva {
+  constructor(p, quantidade = 50, ventoX = 0, ventoY = 0) {
+    this.p = p;
+    this.gotas = [];
+    this.ventoX = ventoX;
+    this.ventoY = ventoY;
+    for (let i = 0; i < quantidade; i++) {
+      this.gotas.push(new Gota(p));
+    }
+  }
+
+  setVento(x, y) {
+    this.ventoX = x;
+    this.ventoY = y;
+  }
+
+  atualizarEDesenhar() {
+    for (let gota of this.gotas) {
+      gota.atualizar(this.ventoX, this.ventoY);
+      gota.desenhar();
     }
   }
 }
@@ -937,6 +1060,7 @@ let interfaceGlobal = null;
 let areaGlobal = null;
 let inimigoGlobal = null;
 let musicaFundo;
+let chuvaGlobal = null;
 const Sketch = () => {
   useEffect(() => {
     let myP5;
@@ -944,7 +1068,7 @@ const Sketch = () => {
     const sketch = (p) => {
       myP5 = p;
       p.setup = () => {
-        p.createCanvas(1200, 800);
+        p.createCanvas(1280, 720, p.P2D);
         musicaFundo = new Som(p, "sons/music.wav", true);
         musicaFundo.volume(0.05);
         mudarTela(telaAtual);
@@ -952,27 +1076,9 @@ const Sketch = () => {
         //variáveis globais para não serem resetadas quando trocar de tela.
         jogadorGlobal = new Jogador(p);
         moedaGlobal = new Moeda(p, jogadorGlobal);
-<<<<<<< HEAD
-        interfaceGlobal = new Interface(p,jogadorGlobal);
-        areaGlobal = new Arena(p, p.width/2, p.height/2, 100, 100);  
-        
-        botoesUpgradeGlobais.push(          
-          new botaoUpgrade(p, "+ Vida Max", p.width / 2 + 100 , p.height / 2 -100 , 200, 100, 3, 10,() =>{jogadorGlobal.vidaMax += 50;} ),
-          new botaoUpgrade(p, "+ Velocidade", p.width / 2 - 100, p.height / 2 - 100, 200, 100, 3, 10,() =>{jogadorGlobal.velMax += 0.5;} ),
-          new botaoUpgrade(p, "+ Tamanho da área", p.width / 2 - 100, p.height / 2, 200, 100, 3, 5,() => {areaGlobal.largura += 50; areaGlobal.altura += 50; areaGlobal.x -= 25; areaGlobal.y -= 25}),
-          new botaoUpgrade(p, "- Velocidade dos \n inimigos", p.width / 2 - 100, p.height / 2 + 100, 200, 100, 3, 5,() => {upgradesAplicados.inimigoVel -= 0.5; velocidadeInimigoGlobal = velocidadeInimigoBase + upgradesAplicados.inimigoVel;}),
-          new botaoUpgrade(p, "Barra de tempo", p.width / 2 - 100, p.height / 2 + 200, 200, 100, 1, 10,() => {interfaceGlobal.mostrar = true}),
-        );         
-        
-       };
-       
-      const mudarTela = (novaTela) => {        
-        telaAtual = novaTela;       
-        
-        if (novaTela === 'menu') {
-=======
         interfaceGlobal = new Interface(p, jogadorGlobal);
         areaGlobal = new Arena(p, p.width / 2, p.height / 2, 100, 100);
+        chuvaGlobal = new Chuva(p, 100, 0); // vento inicial 0
 
         botoesUpgradeGlobais.push(
           new botaoUpgrade(
@@ -982,10 +1088,10 @@ const Sketch = () => {
             p.height / 2 - 100,
             200,
             100,
-            3,
-            10,
+            5,
+            5,
             () => {
-              jogadorGlobal.vidaMax += 100;
+              jogadorGlobal.vidaMax += 50;
             }
           ),
           new botaoUpgrade(
@@ -995,8 +1101,8 @@ const Sketch = () => {
             p.height / 2 - 100,
             200,
             100,
-            3,
-            10,
+            5,
+            15,
             () => {
               jogadorGlobal.velMax += 0.5;
             }
@@ -1009,7 +1115,7 @@ const Sketch = () => {
             200,
             100,
             3,
-            5,
+            10,
             () => {
               areaGlobal.largura += 50;
               areaGlobal.altura += 50;
@@ -1024,8 +1130,8 @@ const Sketch = () => {
             p.height / 2 + 100,
             200,
             100,
-            3,
-            5,
+            1,
+            50,
             () => {
               upgradesAplicados.inimigoVel -= 0.5;
               velocidadeInimigoGlobal =
@@ -1040,12 +1146,11 @@ const Sketch = () => {
             200,
             100,
             1,
-            10,
+            25,
             () => {
               interfaceGlobal.mostrar = true;
             }
           ),
-          // NOVO BOTÃO AQUI:
           new botaoUpgrade(
             p,
             "Tamanho do Player",
@@ -1054,11 +1159,27 @@ const Sketch = () => {
             200,
             100,
             3,
-            1,
+            10,
+            () => {              
+              jogadorGlobal.escala *= 0.8; // Aumenta o tamanho do jogador
+            }
+          ),
+          new botaoUpgrade(
+            p,
+            "+ Moedas por segundo",
+            p.width / 2 + 100,
+            p.height / 2 + 100,
+            200,
+            100,
+            5, // máximo de cliques
+            20, // custo inicial
             () => {
-              jogadorGlobal.escala *= 0.8;
+              moedaGlobal.multiplicador += 1;
             }
           )
+          
+          
+          
         );
       };
 
@@ -1066,7 +1187,6 @@ const Sketch = () => {
         telaAtual = novaTela;
 
         if (novaTela === "menu") {
->>>>>>> 6b2b267d1c6c226278ceda9852867ff2e66f5dec
           telaObj = new Menu(myP5, mudarTela);
         } else if (novaTela === "sobre") {
           telaObj = new TelaSobre(myP5, mudarTela);
@@ -1078,7 +1198,8 @@ const Sketch = () => {
             botoesUpgradeGlobais,
             moedaGlobal,
             interfaceGlobal,
-            areaGlobal
+            areaGlobal,
+            chuvaGlobal
           );
           musicaFundo.volume(0.05);
           if (!musicaFundo.estaTocando()) {
@@ -1110,7 +1231,7 @@ const Sketch = () => {
         if (telaObj && telaObj.mousePressed) {
           telaObj.mousePressed();
         }
-      };
+      };     
     };
 
     const p5Instance = new window.p5(
