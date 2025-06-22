@@ -36,6 +36,6 @@ JavaScript
 
 ## Autor
 Desenvolvido por:
-João Victor Carvalho
-Lucas Vecino Rodrigues
-Matheus Brehm
+João Victor Carvalho,
+Lucas Vecino Rodrigues,
+Matheus Brehm.
