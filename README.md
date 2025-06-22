@@ -34,6 +34,15 @@ React
 p5.js
 JavaScript
 
+## Como Jogar
+Todas as interações no jogo são feitas com o Mouse.
+
+Movimentação:
+O personagem segue o curso no mouse.
+
+Interação com botões:
+clique com o botão esquerdo do mouse.
+
 ## Autor
 Desenvolvido por:
 João Victor Carvalho,
